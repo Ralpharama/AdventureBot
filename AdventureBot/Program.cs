@@ -10,8 +10,8 @@ namespace AdventureBot
 {
     class Program
     {
-        internal static string Username = "YOUR_EMAIL_HERE";
-        internal static string Password = "YOUR_PASSWORD_HERE";
+        internal static string Username = "YOUR_ACCOUNT_EMAIL";
+        internal static string Password = "YOUR_PASSWORD";
         internal static string InstanceName = "botsin.space";
         internal static int XSize = 3;
         internal static int YSize = 3;
@@ -43,8 +43,9 @@ namespace AdventureBot
             {
 
                 var language = new Language();
-                var dungeon = new Dungeon();
-       
+                var dungeon = new Dungeon(db);
+                dungeon.LoadDungeon();
+
                 var authorize = new Authorize();
                 await authorize.CreateApp(Program.InstanceName, "Tootnet", Scope.Read | Scope.Write | Scope.Follow);
 
@@ -52,10 +53,14 @@ namespace AdventureBot
                 var tokens = await authorize.AuthorizeWithEmail(Program.Username, Program.Password);
 
                 //Console.WriteLine("toot [status]");
-                Console.WriteLine("notification - list notifs");
-                Console.WriteLine("follows -  send message to all followers");
-                Console.WriteLine("reply - send message to all recent mentions");
-                Console.WriteLine("createnew - wipe and create new dungeon");
+                Console.WriteLine("toot [message] - toot message as AdventureBot");
+                Console.WriteLine("notification - list notifications");
+                Console.WriteLine("push - send message to all followers with current room");
+                Console.WriteLine("test - timestamp test send message to all recent mentions");
+                Console.WriteLine("createnew - !!!! wipe and create new dungeon");
+                Console.WriteLine("add - add/upset players from notif list into db... ALSO reomoves unfollow");
+                Console.WriteLine("load - load current dungeon");
+                Console.WriteLine("players - list current players");
                 Console.WriteLine("quit");
 
                 var command = args;
@@ -83,27 +88,89 @@ namespace AdventureBot
 
                         case "notification":
                             var notifications = await tokens.Notifications.GetAsync();
-                            Console.WriteLine("--------------------");
                             foreach (var notification in notifications)
                             {
+                                Console.WriteLine("-----[start]-------");
                                 Console.WriteLine(notification.Account.DisplayName + "\t\t" + notification.Account.Acct);
                                 Console.WriteLine(notification.Type);
                                 if (notification.Type == "mention" || notification.Type == "reblog" ||
                                     notification.Type == "favourite")
                                 {
-                                    Console.WriteLine("==========");
-                                    Console.WriteLine(notification.Status.Account.DisplayName + "\t\t" +
-                                                      notification.Status.Account.Acct);
+                                    Console.WriteLine(notification.Status.Id+": "+
+                                        notification.Status.Account.DisplayName + "\t\t" +
+                                        notification.Status.Account.Acct);
                                     Console.WriteLine(TagRegex
                                         .Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim());
-                                    Console.WriteLine("==========");
                                 }
                                 Console.WriteLine(notification.CreatedAt);
-                                Console.WriteLine("--------------------");
+                                Console.WriteLine("------[end]------");
                             }
                             break;
 
-                        case "follows":
+                        case "add":
+                            Console.WriteLine("Checking for followers...");
+                            var addNotif = await tokens.Notifications.GetAsync();
+                            foreach (var notification in addNotif)
+                            {
+                                if (notification.Type == "follow")
+                                {
+                                    Player p = dungeon.LoadPlayer(notification.Account.Acct);
+                                    if (p != null)
+                                    {
+                                        Console.WriteLine("Player " + p.Username+" already exists in db...");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
+                                        dungeon.AddPlayer(notification.Account.Acct);
+                                        var addMessage = "Welcome @" + notification.Account.Acct +
+                                                         ", you have joined the game. Type 'help' for commands. "+
+                                                         "You are in "+dungeon.GetRoomName(p.X,p.Y,p.Z)+
+                                                         dungeon.GetRoomExits(p.X, p.Y, p.Z);
+                                        await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                                    }
+                                }
+                                if (notification.Type == "unfollow")
+                                {
+                                    dungeon.DeletePlayer(notification.Account.Acct);
+                                    var delMessage = "Farewell @" + notification.Account.Acct +
+                                                     ", you have left the game. Follow to to play again. ";
+                                    await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                                }
+
+                            }
+                            //Thread.Sleep(900000);  // 15 mins
+                            //await Task.Delay(20);
+                            break;
+
+                        // Each player that has mentioned us, process their input
+                        case "process":
+                            Console.WriteLine("Processing players...");
+                            var pn = await tokens.Notifications.GetAsync();
+                            long currentStatusId;
+                            foreach (var notification in pn)
+                            {
+                                if (notification.Type == "mention")
+                                {
+                                    Console.WriteLine("Mention: " + notification.Account.Acct + ": "+ TagRegex.Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim());
+                                    currentStatusId = notification.Status.Id;
+                                    Player pl = dungeon.LoadPlayer(notification.Account.Acct);
+                                    if (pl != null && pl.LastStatusId<currentStatusId)
+                                    {
+                                        var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
+                                        dungeon.UpsertPlayer(pl);
+                                        if (response != null)
+                                        {
+                                            //await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                                            Console.Write("Sending toot to " + notification.Account.Acct);
+                                            Console.WriteLine(" : " + response);
+                                        }
+                                    }
+                                }
+                            }
+                            break;
+
+                        case "push":
                             Console.WriteLine("Checking for followers...");
                             var toReplyF = await tokens.Notifications.GetAsync();
                             string messageToSendF = "Hello, adventurer! \r" +
@@ -123,7 +190,7 @@ namespace AdventureBot
                             //await Task.Delay(20);
                             break;
 
-                        case "reply":
+                        case "test":
                             Console.WriteLine("Checking for mentions...");
                             var toReply = await tokens.Notifications.GetAsync();
                             var dateAnHourAgo = DateTime.Now.AddHours(-2);
@@ -147,6 +214,14 @@ namespace AdventureBot
 
                         case "createnew":
                             dungeon.CreateDungeon();
+                            break;
+
+                        case "load":
+                            dungeon.LoadDungeon();
+                            break;
+
+                        case "players":
+                            dungeon.LoadPlayers();
                             break;
                     }
                     Console.Write("command: ");

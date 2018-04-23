@@ -2,6 +2,10 @@
 {
     public class BackupScratchPas
     {
+
+        internal static string Username = "ralph_22@hotmail.com";
+        internal static string Password = "zorkMA7415";
+
         // Get a collection (or create, if doesn't exist)
         //var col = db.GetCollection<Player>("players");
         //var player = new Player

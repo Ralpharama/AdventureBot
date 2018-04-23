@@ -27,8 +27,7 @@ namespace AdventureBot
             return toReturn.First().ToString().ToUpper() + toReturn.Substring(1);
         }
 
-        public string[] Adjectives = new string[]
-        {
+        public string[] Adjectives = {
             "average ", "big ", "colossal ", "fat ", "giant ", "gigantic ", "great ", "huge ", "immense ", "large ",
             "little ", "long ", "mammoth ", "massive ", "miniature ", "petite ", "puny ", "short ", "small ", "tall ",
             "tiny ", " boiling ", "breezy ", "broken ", "bumpy ", "chilly ", "cold ", "cool ", "creepy ", "crooked ",
@@ -191,8 +190,7 @@ namespace AdventureBot
             "wasteful ", "wide-eyed", "wonderful", "yellow", "yummy", "zany"
         };
 
-        public string[] LocationNames = new string[]
-        {
+        public string[] LocationNames = {
             "Room", "Room", "Room", "Room", "Room", "Room", "Room", "Room", "Room", "Room",
             "Corridor", "Corridor", "Corridor", "Corridor", "Corridor",
             "Cavern",
@@ -201,7 +199,6 @@ namespace AdventureBot
             "Tunnel",
             "Cave",
             "space", "free space", "headroom", "legroom", "area", "territory", "expanse", "extent", "volume",
-            "elbow room",
             "hall",
             "assembly room", "auditorium", "corridor", "passageway", "hall", "hallway", "entrance", "hall", "entrance",
             "walkway", "aisle", "gangway", "alley", "alleyway", "lane", "path", "pathway", "way", "footpath", "track",
