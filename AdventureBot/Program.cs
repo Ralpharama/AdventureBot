@@ -10,8 +10,8 @@ namespace AdventureBot
 {
     class Program
     {
-        internal static string Username = "ralph_22@hotmail.com";
-        internal static string Password = "zorkMA7415";
+        internal static string Username = "YOUR_EMAIL_HERE";
+        internal static string Password = "YOUR_PASSWORD_HERE";
         internal static string InstanceName = "botsin.space";
         internal static int XSize = 3;
         internal static int YSize = 3;
