@@ -49,8 +49,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitNorth == (int) ExitStates.Open)
                 {
                     p.Y--;
-                    toReturn += "You exit north. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You exit north. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -62,8 +62,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitEast == (int)ExitStates.Open)
                 {
                     p.X++;
-                    toReturn += "You exit east. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You exit east. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -75,8 +75,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitSouth == (int)ExitStates.Open)
                 {
                     p.Y++;
-                    toReturn += "You exit south. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You exit south. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -88,8 +88,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
                 {
                     p.X--;
-                    toReturn += "You exit west. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You exit west. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -101,8 +101,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitUp == (int)ExitStates.Open)
                 {
                     p.Z--;
-                    toReturn += "You ascend to safer places in the dungeon - you go up. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You ascend to safer places in the dungeon - you go up. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -114,8 +114,8 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
                 {
                     p.Z++;
-                    toReturn += "You descend deeper into the dungeon - you go down. <br>" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                    toReturn += "You descend deeper into the dungeon - you go down. \r\n" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -126,7 +126,7 @@ namespace AdventureBot
             // Look
             if (words.Any("|look|".Contains))
             {
-                toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                             GetRoomExits(p.X, p.Y, p.Z);
                 return toReturn;
             }
