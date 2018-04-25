@@ -10,12 +10,12 @@ namespace AdventureBot
 {
     class Program
     {
-        internal static string Username = "YOUR_ACCOUNT_EMAIL";
+        internal static string Username = "YOUR_EMAIL";
         internal static string Password = "YOUR_PASSWORD";
         internal static string InstanceName = "botsin.space";
-        internal static int XSize = 3;
-        internal static int YSize = 3;
-        internal static int ZSize = 3;
+        internal static int XSize = 5;
+        internal static int YSize = 5;
+        internal static int ZSize = 5;
 
         public static readonly Regex TagRegex =
             new Regex(@"<(""[^""]*""|'[^']*'|[^'"">])*>", RegexOptions.Compiled);
@@ -52,15 +52,13 @@ namespace AdventureBot
                 Console.WriteLine("Logging in " + Program.Username);
                 var tokens = await authorize.AuthorizeWithEmail(Program.Username, Program.Password);
 
-                //Console.WriteLine("toot [status]");
                 Console.WriteLine("toot [message] - toot message as AdventureBot");
                 Console.WriteLine("notification - list notifications");
-                Console.WriteLine("push - send message to all followers with current room");
-                Console.WriteLine("test - timestamp test send message to all recent mentions");
-                Console.WriteLine("createnew - !!!! wipe and create new dungeon");
                 Console.WriteLine("add - add/upset players from notif list into db... ALSO reomoves unfollow");
-                Console.WriteLine("load - load current dungeon");
+                Console.WriteLine("process - process mentions as commands");
+                Console.WriteLine("loop - run add and process with pause on endless loop");
                 Console.WriteLine("players - list current players");
+                Console.WriteLine("createnew - !!!! wipe and create new dungeon");
                 Console.WriteLine("quit");
 
                 var command = args;
@@ -77,11 +75,9 @@ namespace AdventureBot
                         case "toot":
                             if (command.Length <= 1)
                                 break;
-
                             var text = command[1].Trim();
                             var post = await tokens.Statuses.PostAsync(status => text);
-
-                            Console.WriteLine(post.Account.DisplayName + "\t\t" + post.Account.Acct);
+                            Console.WriteLine(post.Account.DisplayName + "<br>" + post.Account.Acct);
                             Console.WriteLine(TagRegex.Replace(post.Content.Replace("<br />", "\n"), "").Trim());
                             Console.WriteLine(post.CreatedAt);
                             break;
@@ -91,13 +87,13 @@ namespace AdventureBot
                             foreach (var notification in notifications)
                             {
                                 Console.WriteLine("-----[start]-------");
-                                Console.WriteLine(notification.Account.DisplayName + "\t\t" + notification.Account.Acct);
+                                Console.WriteLine(notification.Account.DisplayName + "<br>" + notification.Account.Acct);
                                 Console.WriteLine(notification.Type);
                                 if (notification.Type == "mention" || notification.Type == "reblog" ||
                                     notification.Type == "favourite")
                                 {
                                     Console.WriteLine(notification.Status.Id+": "+
-                                        notification.Status.Account.DisplayName + "\t\t" +
+                                        notification.Status.Account.DisplayName + "<br>" +
                                         notification.Status.Account.Acct);
                                     Console.WriteLine(TagRegex
                                         .Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim());
@@ -107,110 +103,26 @@ namespace AdventureBot
                             }
                             break;
 
+                        // Add new players
                         case "add":
-                            Console.WriteLine("Checking for followers...");
-                            var addNotif = await tokens.Notifications.GetAsync();
-                            foreach (var notification in addNotif)
-                            {
-                                if (notification.Type == "follow")
-                                {
-                                    Player p = dungeon.LoadPlayer(notification.Account.Acct);
-                                    if (p != null)
-                                    {
-                                        Console.WriteLine("Player " + p.Username+" already exists in db...");
-                                    }
-                                    else
-                                    {
-                                        Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
-                                        dungeon.AddPlayer(notification.Account.Acct);
-                                        var addMessage = "Welcome @" + notification.Account.Acct +
-                                                         ", you have joined the game. Type 'help' for commands. "+
-                                                         "You are in "+dungeon.GetRoomName(p.X,p.Y,p.Z)+
-                                                         dungeon.GetRoomExits(p.X, p.Y, p.Z);
-                                        await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
-                                    }
-                                }
-                                if (notification.Type == "unfollow")
-                                {
-                                    dungeon.DeletePlayer(notification.Account.Acct);
-                                    var delMessage = "Farewell @" + notification.Account.Acct +
-                                                     ", you have left the game. Follow to to play again. ";
-                                    await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
-                                }
-
-                            }
-                            //Thread.Sleep(900000);  // 15 mins
-                            //await Task.Delay(20);
+                            await DoAdds(tokens, db, dungeon);
                             break;
 
                         // Each player that has mentioned us, process their input
                         case "process":
-                            Console.WriteLine("Processing players...");
-                            var pn = await tokens.Notifications.GetAsync();
-                            long currentStatusId;
-                            foreach (var notification in pn)
-                            {
-                                if (notification.Type == "mention")
-                                {
-                                    Console.WriteLine("Mention: " + notification.Account.Acct + ": "+ TagRegex.Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim());
-                                    currentStatusId = notification.Status.Id;
-                                    Player pl = dungeon.LoadPlayer(notification.Account.Acct);
-                                    if (pl != null && pl.LastStatusId<currentStatusId)
-                                    {
-                                        var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
-                                        dungeon.UpsertPlayer(pl);
-                                        if (response != null)
-                                        {
-                                            //await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "private");
-                                            Console.Write("Sending toot to " + notification.Account.Acct);
-                                            Console.WriteLine(" : " + response);
-                                        }
-                                    }
-                                }
-                            }
+                            await DoProcess(tokens, db, dungeon);
                             break;
 
-                        case "push":
-                            Console.WriteLine("Checking for followers...");
-                            var toReplyF = await tokens.Notifications.GetAsync();
-                            string messageToSendF = "Hello, adventurer! \r" +
-                                                    "You find yourself in '" +
-                                                    dungeon.GetRoomName(0, 0, 0) +
-                                                    "\r" + dungeon.GetRoomExits(0, 0, 0);
-                            foreach (var notification in toReplyF)
+                        // Add and process in andless loop - for task running from scheduler run with dotnet adventurebot.dll loop
+                        case "loop":
+                            while (true)
                             {
-                                if (notification.Type == "follow")
-                                {
-                                    //await tokens.Statuses.PostAsync(status => "@"+notification.Account.Acct+" "+messageToSendF);
-                                    await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + messageToSendF, in_reply_to_account_id => notification.Account.Id, visibility => "private");
-                                    Console.WriteLine("Sending toot to " + notification.Account.Acct);
-                                }
-                            }
-                            //Thread.Sleep(900000);  // 15 mins
+                                await DoAdds(tokens, db, dungeon);
+                                await DoProcess(tokens, db, dungeon);
+                                Thread.Sleep(900000);  // 15 mins
+                            };
                             //await Task.Delay(20);
-                            break;
-
-                        case "test":
-                            Console.WriteLine("Checking for mentions...");
-                            var toReply = await tokens.Notifications.GetAsync();
-                            var dateAnHourAgo = DateTime.Now.AddHours(-2);
-                            var dateOneAnd34HoursAgo = DateTime.Now.AddMinutes(-105);
-                            string messageToSend = "Hello, adventurer! You find yourself in '" +
-                                                   language.GetARandomLocationName() + "'. ";
-                            foreach (var notification in toReply)
-                            {
-                                if (notification.Type == "mention")
-                                {
-                                    if (notification.CreatedAt > dateAnHourAgo && notification.CreatedAt < dateOneAnd34HoursAgo)
-                                    {
-                                        await tokens.Statuses.PostAsync(status => messageToSend);
-                                        Console.WriteLine("Sending toot to " + notification.Status.Account.DisplayName);
-                                    }
-                                }
-                            }
-                            //Thread.Sleep(900000);  // 15 mins
-                            //await Task.Delay(20);
-                            break;
+                            return;
 
                         case "createnew":
                             dungeon.CreateDungeon();
@@ -230,5 +142,75 @@ namespace AdventureBot
                 }
             } // end of db using
         }
+
+        // Add new users to game
+        public static async Task DoAdds(Tokens tokens, LiteDatabase db, Dungeon dungeon)
+        {
+            Console.WriteLine("Checking for followers...");
+            var addNotif = await tokens.Notifications.GetAsync();
+            foreach (var notification in addNotif)
+            {
+                if (notification.Type == "follow")
+                {
+                    Player p = dungeon.LoadPlayer(notification.Account.Acct);
+                    if (p != null)
+                    {
+                        Console.WriteLine("Player " + p.Username + " already exists in db...");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
+                        dungeon.AddPlayer(notification.Account.Acct);
+                        var addMessage = "Welcome @" + notification.Account.Acct +
+                                         ", you have joined the game. Type 'help' for commands. " +
+                                         "You are in " + dungeon.GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                                         dungeon.GetRoomExits(p.X, p.Y, p.Z);
+                        await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                    }
+                }
+                if (notification.Type == "unfollow")
+                {
+                    dungeon.DeletePlayer(notification.Account.Acct);
+                    var delMessage = "Farewell @" + notification.Account.Acct +
+                                     ", you have left the game. Follow to to play again. ";
+                    await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                }
+
+            }
+        }
+
+        // Process each mention as command
+        public static async Task DoProcess(Tokens tokens, LiteDatabase db, Dungeon dungeon)
+        {            
+            Console.WriteLine("Processing players...");
+            var pn = await tokens.Notifications.GetAsync();
+            foreach (var notification in pn)
+            {
+                if (notification.Type == "mention")
+                {
+                    var mentionToReturn = TagRegex.Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim();
+                    mentionToReturn = (mentionToReturn.Length > 30) ? mentionToReturn.Substring(30) : mentionToReturn;
+                    Console.WriteLine("M#" + notification.Status.Id + " " + notification.Account.Acct + ": "+ mentionToReturn);
+                    var currentStatusId = notification.Status.Id;
+                    Player pl = dungeon.LoadPlayer(notification.Account.Acct);
+                    //if (pl != null && pl.LastStatusId<currentStatusId)  // Only last command!
+                    if (pl != null)
+                    {
+                        var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
+                        dungeon.UpsertPlayer(pl);
+                        if (response != null)
+                        {
+                            //await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                            Console.Write(">> toot to " + notification.Account.Acct);
+                            Console.WriteLine(" : " + response);
+                        }
+                    }
+                    Console.WriteLine("---");
+                }
+            }
+        }
+
+
+
     }
 }

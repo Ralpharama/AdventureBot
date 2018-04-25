@@ -29,59 +29,67 @@ namespace AdventureBot
         // Process this player's input, note upsert is done in main program after all processing
         public string Process(Player p, long statusId, string content)
         {
+            string toReturn = "";
+
             // Update with last status update id to prevent re-doing same command
             p.LastStatusId = statusId;
 
-            string toReturn = "";
+            // parse string
             content = Program.TagRegex.Replace(content.Replace("<br />", "\n"), "").Trim();
-            var words = content.Trim().Split(' ');
+            //var words = content.Trim().Split(' ');
+            var contentScan = "|"+content.Replace(" ", "| |")+"|";
+            contentScan = contentScan.Replace("?", "");
+            contentScan = contentScan.Replace("!", "").ToLower();
+            var punctuation = contentScan.Where(Char.IsPunctuation).Distinct().ToArray();
+            var words = contentScan.Split().Select(x => x.Trim(punctuation));
+
             // Directions
-            if (words.Any("north".Contains))
+            if (words.Any("|north|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitNorth == (int) ExitStates.Open)
                 {
                     p.Y--;
-                    toReturn += "You exit north. \t\t" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) +
+                    toReturn += "You exit north. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
                 toReturn += "You can't go that way.";
                 return toReturn;
             }
-            if (words.Any("east".Contains))
+            if (words.Any("|east|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitEast == (int)ExitStates.Open)
                 {
                     p.X++;
-                    toReturn += "You exit east. \t\t" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) +
+                    toReturn += "You exit east. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
                 toReturn += "You can't go that way.";
                 return toReturn;
             }
-            if (words.Any("south".Contains))
+            if (words.Any("|south|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitSouth == (int)ExitStates.Open)
                 {
                     p.Y++;
-                    toReturn += "You exit south. \t\t" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) +
+                    toReturn += "You exit south. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
                 toReturn += "You can't go that way.";
                 return toReturn;
             }
-            if (words.Any("west".Contains))
+            if (words.Any("|west|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
                 {
                     p.X--;
-                    toReturn += "You exit west. \t\t" +
-                                "You are in " + GetRoomName(p.X, p.Y, p.Z) +
+                    toReturn += "You exit west. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                     return toReturn;
                 }
@@ -90,21 +98,24 @@ namespace AdventureBot
             }
 
             // Look
-            if (words.Any("look".Contains))
+            if (words.Any("|look|".Contains))
             {
-                toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) +
+                toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
                             GetRoomExits(p.X, p.Y, p.Z);
                 return toReturn;
             }
 
             // Help
-            if (words.Any("help".Contains))
+            if (words.Any("|help|".Contains))
             {
                 toReturn += "Commands so far are north, east, south, west, up, down, look and help. ";
                 return toReturn;
             }
 
-            return null;
+            // Don't understand
+            toReturn =
+                "I'm sorry, I didn't understand that. Try using simple words, type 'help' for a full list of commands I understand.";
+            return toReturn;
         }
 
 
@@ -115,13 +126,13 @@ namespace AdventureBot
             var dbRooms = _db.GetCollection<Room>("rooms");
 
             Console.WriteLine("Loading rooms from db...");
-            for (int x = 0; x < Program.XSize; x++)
+            for (var z = 0; z < Program.ZSize; z++)
             {
-                for (int y = 0; y < Program.YSize; y++)
+                for (var x = 0; x < Program.XSize; x++)
                 {
-                    for (int z = 0; z < Program.ZSize; z++)
+                    for (var y = 0; y < Program.YSize; y++)
                     {
-                        _rooms[x,y,z] = dbRooms.FindOne(r => r.X == 0);
+                            _rooms[x,y,z] = dbRooms.FindOne(r => r.X == x && r.Y==y && r.Z==z);
                     }
                 }
             }
@@ -219,11 +230,11 @@ namespace AdventureBot
             dbRooms.EnsureIndex(x => x.Y);
             dbRooms.EnsureIndex(x => x.Z);
 
-            for (int x = 0; x < Program.XSize; x++)
+            for (int z = 0; z < Program.ZSize; z++)
             {
-                for (int y = 0; y < Program.YSize; y++)
+                for (int x = 0; x < Program.XSize; x++)
                 {
-                    for (int z = 0; z < Program.ZSize; z++)
+                    for (int y = 0; y < Program.YSize; y++)
                     {
                         // Make room
                         _rooms[x, y, z] = new Room();
@@ -232,50 +243,56 @@ namespace AdventureBot
                         // Exits
                         if (y != 0) // Can't go north from top edge
                         {
-                            if (_rnd.Next(10) < 5 && y > 0)
+                            if (_rnd.Next(10) < 6 && y > 0)
                             {
                                 _rooms[x, y, z].ExitNorth = (int)ExitStates.Open;
                                 _rooms[x, y-1, z].ExitSouth = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x, y - 1, z]);
                             }
                         }
                         if (x != Program.XSize) // Can't go east from right edge
                         {
-                            if (_rnd.Next(10) < 5 && x < XSize)
+                            if (_rnd.Next(10) < 6 && x < XSize)
                             {
                                 _rooms[x, y, z].ExitEast = (int) ExitStates.Open;
                                 _rooms[x+1, y, z].ExitWest = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x + 1, y, z]);
                             }
                         }
                         if (y != Program.YSize) // Can't go south from bottom edge
                         {
-                            if (_rnd.Next(10) < 5 && y < YSize)
+                            if (_rnd.Next(10) < 6 && y < YSize)
                             {
                                 _rooms[x, y, z].ExitSouth = (int) ExitStates.Open;
                                 _rooms[x, y+1, z].ExitNorth = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x, y + 1, z]);
                             }
                         }
                         if (x != 0) // Can't go west from left edge
                         {
-                            if (_rnd.Next(10) < 5 && x > 0)
+                            if (_rnd.Next(10) < 6 && x > 0)
                             {
                                 _rooms[x, y, z].ExitWest = (int) ExitStates.Open;
                                 _rooms[x-1, y, z].ExitEast = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x - 1, y, z]);
                             }
                         }
                         if (z != 0) // Can't go up from top level
                         {
-                            if (_rnd.Next(10) < 5 && z > 0)
+                            if (_rnd.Next(10) < 6 && z > 0)
                             {
                                 _rooms[x, y, z].ExitUp = (int)ExitStates.Open;
                                 _rooms[x, y, z-1].ExitDown = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x, y, z - 1]);
                             }
                         }
                         if (z != Program.ZSize) // Can't go down from bottom level
                         {
-                            if (_rnd.Next(10) < 5 && z < ZSize)
+                            if (_rnd.Next(10) < 6 && z < ZSize)
                             {
                                 _rooms[x, y, z].ExitDown = (int) ExitStates.Open;
                                 _rooms[x, y, z+1].ExitUp = (int)ExitStates.Open;
+                                dbRooms.Upsert(_rooms[x, y, z + 1]);
                             }
                         }
 
