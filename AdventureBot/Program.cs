@@ -10,6 +10,8 @@ namespace AdventureBot
 {
     class Program
     {
+        internal static bool Debug = false;
+
         internal static string Username = "YOUR_EMAIL";
         internal static string Password = "YOUR_PASSWORD";
         internal static string InstanceName = "botsin.space";
@@ -60,6 +62,11 @@ namespace AdventureBot
                 Console.WriteLine("players - list current players");
                 Console.WriteLine("createnew - !!!! wipe and create new dungeon");
                 Console.WriteLine("quit");
+
+                if (Program.Debug)
+                {
+                    Console.WriteLine("*** DEBUGGING IS ON ***");
+                }
 
                 var command = args;
                 var commandWord = (args == null) ? "" : args.FirstOrDefault()?.ToLower();
@@ -160,12 +167,15 @@ namespace AdventureBot
                     else
                     {
                         Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
-                        dungeon.AddPlayer(notification.Account.Acct);
+                        p = dungeon.AddPlayer(notification.Account.Acct);
                         var addMessage = "Welcome @" + notification.Account.Acct +
                                          ", you have joined the game. Type 'help' for commands. " +
-                                         "You are in " + dungeon.GetRoomName(p.X, p.Y, p.Z) + "\r\t" +
+                                         "You are in " + dungeon.GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                          dungeon.GetRoomExits(p.X, p.Y, p.Z);
-                        await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                        if (!Program.Debug) // Only send toots if not debugging
+                        {
+                            await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                        }
                     }
                 }
                 if (notification.Type == "unfollow")
@@ -173,7 +183,10 @@ namespace AdventureBot
                     dungeon.DeletePlayer(notification.Account.Acct);
                     var delMessage = "Farewell @" + notification.Account.Acct +
                                      ", you have left the game. Follow to to play again. ";
-                    await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                    if (!Program.Debug) // Only send toots if not debugging
+                    {
+                        await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                    }
                 }
 
             }
@@ -193,14 +206,16 @@ namespace AdventureBot
                     Console.WriteLine("M#" + notification.Status.Id + " " + notification.Account.Acct + ": "+ mentionToReturn);
                     var currentStatusId = notification.Status.Id;
                     Player pl = dungeon.LoadPlayer(notification.Account.Acct);
-                    if (pl != null && pl.LastStatusId<currentStatusId)  // Only last command!
-                    //if (pl != null)
+                    if (pl != null && (pl.LastStatusId<currentStatusId || Program.Debug))  // Only last command! unless debugging
                     {
                         var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
                         dungeon.UpsertPlayer(pl);
                         if (response != null)
                         {
-                            await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "private");
+                            if (!Program.Debug) // Only send toots if not debugging
+                            {
+                                await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                            }
                             Console.Write(">> toot to " + notification.Account.Acct);
                             Console.WriteLine(" : " + response);
                         }

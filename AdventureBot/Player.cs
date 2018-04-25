@@ -19,5 +19,6 @@
         public int[] Objects { get; set; }
         public bool IsActive { get; set; }
         public long LastStatusId { get; set; }
+        public int Level { get; set; }
     }
 }

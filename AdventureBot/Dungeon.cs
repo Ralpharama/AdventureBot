@@ -32,7 +32,10 @@ namespace AdventureBot
             string toReturn = "";
 
             // Update with last status update id to prevent re-doing same command
-            p.LastStatusId = statusId;
+            if (!Program.Debug)
+            {
+                p.LastStatusId = statusId;  // Only update this if we're not debugging
+            }
 
             // parse string
             content = Program.TagRegex.Replace(content.Replace("<br />", "\n"), "").Trim();
@@ -52,10 +55,8 @@ namespace AdventureBot
                     toReturn += "You exit north. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
             if (words.Any("|east|".Contains))
             {
@@ -65,10 +66,8 @@ namespace AdventureBot
                     toReturn += "You exit east. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
             if (words.Any("|south|".Contains))
             {
@@ -78,10 +77,8 @@ namespace AdventureBot
                     toReturn += "You exit south. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
             if (words.Any("|west|".Contains))
             {
@@ -91,10 +88,8 @@ namespace AdventureBot
                     toReturn += "You exit west. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
             if (words.Any("|up|".Contains))
             {
@@ -104,23 +99,19 @@ namespace AdventureBot
                     toReturn += "You ascend to safer places in the dungeon - you go up. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
             if (words.Any("|down|".Contains))
             {
-                if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
+                if (_rooms[p.X, p.Y, p.Z].ExitDown == (int)ExitStates.Open)
                 {
                     p.Z++;
                     toReturn += "You descend deeper into the dungeon - you go down. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
-                    return toReturn;
                 }
                 toReturn += "You can't go that way.";
-                return toReturn;
             }
 
             // Look
@@ -128,19 +119,58 @@ namespace AdventureBot
             {
                 toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                             GetRoomExits(p.X, p.Y, p.Z);
+            }
+
+            // Help
+            if (words.Any("|score|".Contains) || words.Any("|status|".Contains))
+            {
+                toReturn += "Status:\r\n";
+                toReturn += "Name: "+p.Username+"\r\n";
+                toReturn += "Location co-ords: " + p.X + p.Y + p.Z + "\r\n";
+                toReturn += "Level: " + p.Level + "\r\n";
+                toReturn += "Health: " + p.Health + "\r\n";
+                toReturn += "Strengh: " + p.Strength + "\r\n";
+                toReturn += "Magic: " + p.Magic + "\r\n";
+                toReturn += "Luck: " + p.Luck + "\r\n";
+                toReturn += "Current weapon: " + p.Weapon + "\r\n";
                 return toReturn;
             }
 
             // Help
             if (words.Any("|help|".Contains))
             {
-                toReturn += "Commands so far are north, east, south, west, up, down, look and help. ";
+                toReturn += "Commands so far are north, east, south, west, up, down, look, status and help. ";
                 return toReturn;
             }
 
-            // Don't understand
-            toReturn =
-                "I'm sorry, I didn't understand that. Try using simple words, type 'help' for a full list of commands I understand.";
+            if (toReturn == "")
+            {
+                // Don't understand
+                toReturn =
+                    "I'm sorry, I didn't understand that. Try using simple words, type 'help' for a full list of commands I understand.";
+            }
+            else
+            {
+                // Get players in room with you
+                var playersInRoom = GetPlayersInRoom(p.X, p.Y, p.Z);
+                if (playersInRoom != null)
+                {
+                    string playersAdd="";
+                    foreach (var player in playersInRoom)
+                    {
+                        if (player.Username != p.Username)
+                        {
+                            playersAdd += "@"+ player.Username + ", ";
+                        }
+                    }
+                    if (playersAdd != "")
+                    {
+                        toReturn += "\r\nAlso here is "+ playersAdd;
+                    }
+                    toReturn = toReturn.TrimEnd(' '); toReturn = toReturn.TrimEnd(',');
+                }
+            }
+
             return toReturn;
         }
 
@@ -199,7 +229,7 @@ namespace AdventureBot
         }
 
         // Add player
-        public void AddPlayer(string username)
+        public Player AddPlayer(string username)
         {
             // Get collection
             var dbPlayers = _db.GetCollection<Player>("players");
@@ -215,10 +245,12 @@ namespace AdventureBot
                 Luck = 5,
                 Magic = 5,
                 Strength = 5,
-                LastStatusId = 0
+                LastStatusId = 0,
+                Level = 1
             };
             MovePlayerRnd(p, 0);
             dbPlayers.Upsert(p);
+            return p;
         }
 
         public void UpsertPlayer(Player p)
@@ -245,6 +277,13 @@ namespace AdventureBot
             dbPlayers.Delete(x => x.Username == username);
         }
 
+        public IEnumerable<Player> GetPlayersInRoom(int x, int y, int z)
+        {
+            var players = _db.GetCollection<Player>("players");
+            IEnumerable<Player> toReturn =  players.Find(r => r.X == x && r.Y == y && r.Z == z);
+            return toReturn;
+        }
+
         // Wipe and overwrite db with new dungeon (careful!)
         public void CreateDungeon()
         {
@@ -263,7 +302,15 @@ namespace AdventureBot
                     for (int y = 0; y < Program.YSize; y++)
                     {
                         // Make room
-                        _rooms[x, y, z] = new Room();
+                        Room currentRoom = dbRooms.FindOne(r => r.X == x && r.Y == y && r.Z == z);
+                        if (currentRoom != null)
+                        {
+                            _rooms[x, y, z] = currentRoom;
+                        }
+                        else
+                        {
+                            _rooms[x, y, z] = new Room();
+                        }
                         ClearRoom(x, y, z, _language.GetARandomLocationName());
 
                         // Exits
@@ -334,7 +381,8 @@ namespace AdventureBot
 
         public string GetRoomName(int x, int y, int z)
         {
-            return _rooms[x, y, z].Title + " {" + x + "," + y + "," + z + "}";
+            return _rooms[x, y, z].Title;
+            //+ " {" + x + "," + y + "," + z + "}";
         }
 
         public string GetRoomExits(int x, int y, int z)
@@ -368,6 +416,7 @@ namespace AdventureBot
             {
                 toReturn = "There are exits to the " + toReturn;
             }
+            toReturn = toReturn.TrimEnd(' ');toReturn = toReturn.TrimEnd(',');
             return toReturn;
         }
 
