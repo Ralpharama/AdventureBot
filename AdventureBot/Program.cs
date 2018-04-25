@@ -189,7 +189,7 @@ namespace AdventureBot
                 if (notification.Type == "mention")
                 {
                     var mentionToReturn = TagRegex.Replace(notification.Status.Content.Replace("<br />", "\n"), "").Trim();
-                    mentionToReturn = (mentionToReturn.Length > 30) ? mentionToReturn.Substring(30) : mentionToReturn;
+                    mentionToReturn = (mentionToReturn.Length > 55) ? mentionToReturn.Substring(0,54) : mentionToReturn;
                     Console.WriteLine("M#" + notification.Status.Id + " " + notification.Account.Acct + ": "+ mentionToReturn);
                     var currentStatusId = notification.Status.Id;
                     Player pl = dungeon.LoadPlayer(notification.Account.Acct);
@@ -205,7 +205,6 @@ namespace AdventureBot
                             Console.WriteLine(" : " + response);
                         }
                     }
-                    Console.WriteLine("---");
                 }
             }
         }

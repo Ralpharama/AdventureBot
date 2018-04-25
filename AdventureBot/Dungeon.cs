@@ -96,6 +96,32 @@ namespace AdventureBot
                 toReturn += "You can't go that way.";
                 return toReturn;
             }
+            if (words.Any("|up|".Contains))
+            {
+                if (_rooms[p.X, p.Y, p.Z].ExitUp == (int)ExitStates.Open)
+                {
+                    p.Z--;
+                    toReturn += "You ascend to safer places in the dungeon - you go up. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                                GetRoomExits(p.X, p.Y, p.Z);
+                    return toReturn;
+                }
+                toReturn += "You can't go that way.";
+                return toReturn;
+            }
+            if (words.Any("|down|".Contains))
+            {
+                if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
+                {
+                    p.Z++;
+                    toReturn += "You descend deeper into the dungeon - you go down. <br>" +
+                                "You are in " + GetRoomName(p.X, p.Y, p.Z) + "<br>" +
+                                GetRoomExits(p.X, p.Y, p.Z);
+                    return toReturn;
+                }
+                toReturn += "You can't go that way.";
+                return toReturn;
+            }
 
             // Look
             if (words.Any("|look|".Contains))
