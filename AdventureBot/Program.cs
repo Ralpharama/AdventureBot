@@ -193,8 +193,8 @@ namespace AdventureBot
                     Console.WriteLine("M#" + notification.Status.Id + " " + notification.Account.Acct + ": "+ mentionToReturn);
                     var currentStatusId = notification.Status.Id;
                     Player pl = dungeon.LoadPlayer(notification.Account.Acct);
-                    //if (pl != null && pl.LastStatusId<currentStatusId)  // Only last command!
-                    if (pl != null)
+                    if (pl != null && pl.LastStatusId<currentStatusId)  // Only last command!
+                    //if (pl != null)
                     {
                         var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
                         dungeon.UpsertPlayer(pl);
