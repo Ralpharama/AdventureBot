@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace AdventureBot
 {
@@ -34,6 +35,34 @@ namespace AdventureBot
                        Monsters[_rnd.Next(Monsters.Length)];
             return toReturn.First().ToString().ToUpper() + toReturn.Substring(1);
         }
+
+
+        public string GetARandomItemName(int typ)
+        {
+            Random _rnd = new Random();
+            var toReturn = Adjectives[_rnd.Next(Adjectives.Length)] + " ";
+            if (typ == 0) // Weapon
+            {
+                toReturn += Weapons[_rnd.Next(Weapons.Length)];
+            }
+            else     // Wearable
+            {
+                toReturn += Wearables[_rnd.Next(Wearables.Length)];
+            }
+            return toReturn.First().ToString().ToUpper() + toReturn.Substring(1);
+        }
+
+        public string[] Weapons =
+        {
+            "knife", "sword", "dagger", "axe", "wand", "stave", "stick", "pole", "mace", "morning star", "machete",
+            "club"
+        };
+
+        public string[] Wearables =
+        {
+            "belt","hat","helmet","coat","waistcoat","shoes","boots","trousers","shorts","scarf","gloves","gauntlets",
+            "ring","bracelet","necklace"
+        };
 
         public string[] Adjectives = {
             "average", "big", "colossal", "fat", "giant", "gigantic", "great", "huge", "immense", "large",

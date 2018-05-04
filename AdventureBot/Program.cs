@@ -12,8 +12,8 @@ namespace AdventureBot
     {
         internal static bool Debug = false;
 
-        internal static string Username = "email_here";
-        internal static string Password = "password_here";
+        internal static string Username = "EMAIL_HERE";
+        internal static string Password = "PASSWORD_HERE";
         internal static string InstanceName = "botsin.space";
         internal static int XSize = 5;
         internal static int YSize = 5;
@@ -62,6 +62,7 @@ namespace AdventureBot
                 Console.WriteLine("players - list current players");
                 Console.WriteLine("createnew - !!!! wipe and create new dungeon");
                 Console.WriteLine("createmonsters - !!!! wipe and create monsters");
+                Console.WriteLine("createitems - !!!! wipe and create items");
                 Console.WriteLine("quit");
 
                 if (Program.Debug)
@@ -138,6 +139,10 @@ namespace AdventureBot
 
                         case "createmonsters":
                             dungeon.CreateMonsters(5);
+                            break;
+
+                        case "createitems":
+                            dungeon.CreateItems(5);
                             break;
 
                         case "load":
@@ -238,10 +243,10 @@ namespace AdventureBot
                             if (!Program.Debug) // Only send toots if not debugging
                             {
                                 tootToSend.AccountId = notification.Account.Id;
-                                await tokens.Statuses.PostAsync(status => "@" + tootToSend.Username + " " + tootToSend.Content, in_reply_to_account_id => tootToSend.AccountId, visibility => tootToSend.Privacy);
+                                await tokens.Statuses.PostAsync(status => "@" + tootToSend.Username + " " + tootToSend.Content, inReplyToAccountId => tootToSend.AccountId, visibility => tootToSend.Privacy);
                             }
-                            Console.Write(">> toot to " + tootToSend.Username);
-                            Console.WriteLine(" : " + tootToSend.Content);
+                            Console.Write(" >> toot to " + tootToSend.Username);
+                            Console.WriteLine(" : " + dungeon.FormatForConsole(tootToSend.Content));
                         }
                     }
                 }
@@ -257,8 +262,8 @@ namespace AdventureBot
                     {
                         await tokens.Statuses.PostAsync(status => "@" + ts.Username + " " + ts.Content, in_reply_to_account_id => ts.AccountId, visibility => ts.Privacy);
                     }
-                    Console.Write(">> toot to " + ts.Username);
-                    Console.WriteLine(" : " + ts.Content);
+                    Console.Write(" >> toot to " + ts.Username);
+                    Console.WriteLine(" : " + dungeon.FormatForConsole(ts.Content));
                 }
 
             }
