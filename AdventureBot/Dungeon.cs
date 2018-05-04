@@ -27,9 +27,13 @@ namespace AdventureBot
         }
 
         // Process this player's input, note upsert is done in main program after all processing
-        public string Process(Player p, long statusId, string content)
+        public TootToSend Process(Player p, long statusId, string content)
         {
-            string toReturn = "";
+            TootToSend toReturn = new TootToSend();
+            toReturn.AccountId = 0;    // We have this on calling func 
+            toReturn.Content = "";
+            toReturn.Username = p.Username;
+            toReturn.Privacy = "direct";    // Not visible to anyone else
 
             // Update with last status update id to prevent re-doing same command
             if (!Program.Debug)
@@ -52,101 +56,119 @@ namespace AdventureBot
                 if (_rooms[p.X, p.Y, p.Z].ExitNorth == (int) ExitStates.Open)
                 {
                     p.Y--;
-                    toReturn += "You exit north. \r\n" +
+                    toReturn.Content += "You exit north. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
             if (words.Any("|east|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitEast == (int)ExitStates.Open)
                 {
                     p.X++;
-                    toReturn += "You exit east. \r\n" +
+                    toReturn.Content += "You exit east. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
             if (words.Any("|south|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitSouth == (int)ExitStates.Open)
                 {
                     p.Y++;
-                    toReturn += "You exit south. \r\n" +
+                    toReturn.Content += "You exit south. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
             if (words.Any("|west|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitWest == (int)ExitStates.Open)
                 {
                     p.X--;
-                    toReturn += "You exit west. \r\n" +
+                    toReturn.Content += "You exit west. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
             if (words.Any("|up|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitUp == (int)ExitStates.Open)
                 {
                     p.Z--;
-                    toReturn += "You ascend to safer places in the dungeon - you go up. \r\n" +
+                    toReturn.Content += "You ascend to safer places in the dungeon - you go up. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
             if (words.Any("|down|".Contains))
             {
                 if (_rooms[p.X, p.Y, p.Z].ExitDown == (int)ExitStates.Open)
                 {
                     p.Z++;
-                    toReturn += "You descend deeper into the dungeon - you go down. \r\n" +
+                    toReturn.Content += "You descend deeper into the dungeon - you go down. \r\n" +
                                 "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                 GetRoomExits(p.X, p.Y, p.Z);
                 }
-                toReturn += "You can't go that way.";
+                else
+                {
+                    toReturn.Content += "You can't go that way.";
+                }
             }
 
             // Look
             if (words.Any("|look|".Contains))
             {
-                toReturn += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
+                toReturn.Content += "You are in " + GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                             GetRoomExits(p.X, p.Y, p.Z);
             }
 
             // Help
             if (words.Any("|score|".Contains) || words.Any("|status|".Contains))
             {
-                toReturn += "Status:\r\n";
-                toReturn += "Name: "+p.Username+"\r\n";
-                toReturn += "Location co-ords: " + p.X + p.Y + p.Z + "\r\n";
-                toReturn += "Level: " + p.Level + "\r\n";
-                toReturn += "Health: " + p.Health + "\r\n";
-                toReturn += "Strengh: " + p.Strength + "\r\n";
-                toReturn += "Magic: " + p.Magic + "\r\n";
-                toReturn += "Luck: " + p.Luck + "\r\n";
-                toReturn += "Current weapon: " + p.Weapon + "\r\n";
+                toReturn.Content += "Status:\r\n";
+                toReturn.Content += "Name: "+p.Username+"\r\n";
+                toReturn.Content += "Location co-ords: " + p.X + p.Y + p.Z + "\r\n";
+                toReturn.Content += "Level: " + p.Level + "\r\n";
+                toReturn.Content += "Health: " + p.Health + "\r\n";
+                toReturn.Content += "Strengh: " + p.Strength + "\r\n";
+                toReturn.Content += "Magic: " + p.Magic + "\r\n";
+                toReturn.Content += "Luck: " + p.Luck + "\r\n";
+                toReturn.Content += "Current weapon: " + p.Weapon + "\r\n";
                 return toReturn;
             }
 
             // Help
             if (words.Any("|help|".Contains))
             {
-                toReturn += "Commands so far are north, east, south, west, up, down, look, status and help. ";
+                toReturn.Content += "Commands so far are north, east, south, west, up, down, look, status and help. ";
                 return toReturn;
             }
 
-            if (toReturn == "")
+            if (toReturn.Content == "")
             {
                 // Don't understand
-                toReturn =
+                toReturn.Content =
                     "I'm sorry, I didn't understand that. Try using simple words, type 'help' for a full list of commands I understand.";
             }
             else
@@ -165,10 +187,27 @@ namespace AdventureBot
                     }
                     if (playersAdd != "")
                     {
-                        toReturn += "\r\nAlso here is "+ playersAdd;
+                        toReturn.Content += "\r\nAlso here is "+ playersAdd;
                     }
-                    toReturn = toReturn.TrimEnd(' '); toReturn = toReturn.TrimEnd(',');
+                    toReturn.Content = toReturn.Content.TrimEnd(' '); toReturn.Content = toReturn.Content.TrimEnd(',');
                 }
+
+                // Monsters in room with you
+                var monstersEnumerable = GetMonstersInRoom(p.X, p.Y, p.Z);
+                if (monstersEnumerable != null)
+                {
+                    string monstersAdd = "";
+                    foreach (var monster in monstersEnumerable)
+                    {
+                        monstersAdd += monster.Username + ", ";
+                    }
+                    if (monstersAdd != "")
+                    {
+                        toReturn.Content += "\r\nThere are monsters here: " + monstersAdd;
+                    }
+                    toReturn.Content = toReturn.Content.TrimEnd(' '); toReturn.Content = toReturn.Content.TrimEnd(',');
+                }
+
             }
 
             return toReturn;
@@ -206,30 +245,38 @@ namespace AdventureBot
             dbPlayers.EnsureIndex(x => x.Username);
 
             Console.WriteLine("Loading players from db...");
-            var allPlayers = dbPlayers.Find(r => r.X == 0);
+            var allPlayers = dbPlayers.Find(r => r.IsActive);
             foreach (var p in allPlayers)
             {
                 Console.WriteLine("Player "+p.Id+"."+p.Username+" in rm "+p.X+"," + p.Y + "," + p.Z);
             }
             Console.WriteLine("Complete...");
-
             //var rm = dbRooms.FindOne(x => x.X == 0 );
             //Console.WriteLine("Room: "+rm.Title+" ["+rm.Id+"]");
         }
 
-        // Load dungeon into memory
+        // Load player into memory
         public Player LoadPlayer(string username)
         {
             // Get collection
             var dbPlayers = _db.GetCollection<Player>("players");
             dbPlayers.EnsureIndex(x => x.Username);
-
             Player player = dbPlayers.FindOne(r => r.Username == username);
+            return player;
+        }
+        public Player LoadPlayer(int x, int y, int z)
+        {
+            // Get collection
+            var dbPlayers = _db.GetCollection<Player>("players");
+            dbPlayers.EnsureIndex(s => s.X);
+            dbPlayers.EnsureIndex(s => s.Y);
+            dbPlayers.EnsureIndex(s => s.Z);
+            Player player = dbPlayers.FindOne(s => s.X==x && s.Y == y && s.Z == z);
             return player;
         }
 
         // Add player
-        public Player AddPlayer(string username)
+        public Player AddPlayer(string username, long accountid)
         {
             // Get collection
             var dbPlayers = _db.GetCollection<Player>("players");
@@ -246,7 +293,8 @@ namespace AdventureBot
                 Magic = 5,
                 Strength = 5,
                 LastStatusId = 0,
-                Level = 1
+                Level = 1,
+                AccountId = accountid
             };
             MovePlayerRnd(p, 0);
             dbPlayers.Upsert(p);
@@ -258,6 +306,12 @@ namespace AdventureBot
             var dbPlayers = _db.GetCollection<Player>("players");
             dbPlayers.EnsureIndex(x => x.Username);
             dbPlayers.Upsert(p);
+        }
+        public void UpsertMonster(Player p)
+        {
+            var dbMonsters = _db.GetCollection<Player>("monsters");
+            dbMonsters.EnsureIndex(x => x.Username);
+            dbMonsters.Upsert(p);
         }
 
         // Move payer to random room
@@ -283,6 +337,164 @@ namespace AdventureBot
             IEnumerable<Player> toReturn =  players.Find(r => r.X == x && r.Y == y && r.Z == z);
             return toReturn;
         }
+
+        public IEnumerable<Player> GetMonstersInRoom(int x, int y, int z)
+        {
+            var players = _db.GetCollection<Player>("monsters");
+            IEnumerable<Player> toReturn = players.Find(r => r.X == x && r.Y == y && r.Z == z);
+            return toReturn;
+        }
+
+        // Process all monsters, so they 
+        // attack if there is a player here, in random order
+        // move if random, in random direction, not up or down except very rarely!
+        public IEnumerable<TootToSend> ProcessMonsters()
+        {
+            List<TootToSend> toReturn = new List<TootToSend>();
+
+            var dbMonsters = _db.GetCollection<Player>("monsters");
+            dbMonsters.EnsureIndex(x => x.Username);
+
+            var monsters = dbMonsters.Find(r => r.IsActive && r.IsMonster);
+            foreach (var monster in monsters)
+            {
+                Console.WriteLine("Processing monster: " + monster.Username + " "+monster.Id);
+                TootToSend thisToot = new TootToSend();
+
+                // Is there a player in this room?
+                var p = LoadPlayer(monster.X, monster.Y, monster.Z);
+                if (p != null)
+                {
+                    thisToot.Username = p.Username;
+                    thisToot.AccountId = p.AccountId;
+                    thisToot.Privacy = "direct";
+                    thisToot.Content = monster.Username + " looks at you nastily.";
+                    toReturn.Add(thisToot);
+                }
+                // If not, let's maybe move
+                else
+                {
+                    if (_rnd.Next(10) < 5)
+                    {
+                        var ch = _rnd.Next(6);
+                        switch (ch)
+                        {
+                            case 0:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitNorth < 3)
+                                {
+                                    monster.Y--;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster " + monster.Username + " moved to " + monster.X + "," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                            case 1:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitEast < 3)
+                                {
+                                    monster.X++;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster " + monster.Username + " moved to " + monster.X + "," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                            case 2:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitSouth < 3)
+                                {
+                                    monster.Y++;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster " + monster.Username + " moved to " + monster.X + "," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                            case 3:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitWest < 3)
+                                {
+                                    monster.X--;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster " + monster.Username + " moved to " + monster.X + "," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                            case 4:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitDown < 3 && _rnd.Next(20)==1)
+                                {
+                                    monster.Z++;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster " + monster.Username + " moved to " + monster.X + "," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                            case 5:
+                                if (_rooms[monster.X, monster.Y, monster.Z].ExitUp < 3 && _rnd.Next(20) == 1)
+                                {
+                                    monster.Z--;
+                                    UpsertMonster(monster);
+                                    Console.WriteLine("Monster "+monster.Username+" moved to "+monster.X+"," + monster.Y + "," + monster.Z);
+                                }
+                                break;
+                        }
+                    }
+
+                    // After move, is there a player here? If so, toot him the good news!
+                    var q = LoadPlayer(monster.X, monster.Y, monster.Z);
+                    if (q != null)
+                    {
+                        thisToot.Username = q.Username;
+                        thisToot.AccountId = q.AccountId;
+                        thisToot.Privacy = "direct";
+                        thisToot.Content = monster.Username + " has entered the room.";
+                        toReturn.Add(thisToot);
+                    }
+
+                }
+            }
+
+            return toReturn;
+        }
+
+        // Wipe and recreate monsters
+        public void CreateMonsters(int numPerLevel)
+        {
+            // Delete all currently in db
+            var dbMonsters = _db.GetCollection<Player>("monsters");
+            dbMonsters.EnsureIndex(x => x.Username);
+            dbMonsters.Delete(x => x.Username != null);
+            for (int z = 0; z < Program.ZSize; z++)
+            {
+                for (int x = 0; x < numPerLevel; x++)
+                {
+                    Player m = CreateNewMonster(_rnd.Next(Program.XSize), _rnd.Next(Program.YSize), z);
+                    Console.WriteLine("New Monster:");
+                    Console.WriteLine("Name: " + m.Username + "");
+                    Console.WriteLine("Location co-ords: " + m.X + m.Y + m.Z + "");
+                    Console.WriteLine("Level: " + m.Level + "");
+                    Console.WriteLine("Health: " + m.Health + "");
+                    Console.WriteLine("Strengh: " + m.Strength + "");
+                    Console.WriteLine("Magic: " + m.Magic + "");
+                    Console.WriteLine("Luck: " + m.Luck + "");
+                    Console.WriteLine("Current weapon: " + m.Weapon + "");
+                    dbMonsters.Upsert(m);
+                }
+            }
+        }
+
+        public Player CreateNewMonster(int x,int y,int z)
+        {
+            return new Player
+            {
+                IsMonster = true,
+                IsPlayer = false,
+                IsNPC = false,
+                X = x,
+                Y = y,
+                Z = z,
+                Username = _language.GetARandomMonsterName(),
+                Health = (_rnd.Next(10) * z) + 1,
+                Magic = (_rnd.Next(10) * z) + 1,
+                Luck = (_rnd.Next(10) * z) + 1,
+                Strength = (_rnd.Next(10) * z) + 1,
+                Level = (_rnd.Next(3) * z) + 1,
+                Weapon = 0,
+                IsActive = true,
+                LastStatusId = 0,
+            };
+        }
+
 
         // Wipe and overwrite db with new dungeon (careful!)
         public void CreateDungeon()

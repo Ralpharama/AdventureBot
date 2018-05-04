@@ -12,8 +12,8 @@ namespace AdventureBot
     {
         internal static bool Debug = false;
 
-        internal static string Username = "YOUR_EMAIL";
-        internal static string Password = "YOUR_PASSWORD";
+        internal static string Username = "email_here";
+        internal static string Password = "password_here";
         internal static string InstanceName = "botsin.space";
         internal static int XSize = 5;
         internal static int YSize = 5;
@@ -61,6 +61,7 @@ namespace AdventureBot
                 Console.WriteLine("loop - run add and process with pause on endless loop");
                 Console.WriteLine("players - list current players");
                 Console.WriteLine("createnew - !!!! wipe and create new dungeon");
+                Console.WriteLine("createmonsters - !!!! wipe and create monsters");
                 Console.WriteLine("quit");
 
                 if (Program.Debug)
@@ -135,6 +136,10 @@ namespace AdventureBot
                             dungeon.CreateDungeon();
                             break;
 
+                        case "createmonsters":
+                            dungeon.CreateMonsters(5);
+                            break;
+
                         case "load":
                             dungeon.LoadDungeon();
                             break;
@@ -166,30 +171,48 @@ namespace AdventureBot
                     }
                     else
                     {
-                        Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
-                        p = dungeon.AddPlayer(notification.Account.Acct);
+                        //Console.WriteLine("Adding new player " + notification.Account.Acct + "...");
+                        p = dungeon.AddPlayer(notification.Account.Acct, notification.Account.Id);
+                        Console.WriteLine("New player (" + p.Id + ") #" + p.AccountId + " - " + p.Username + " in rm " + p.X + "," + p.Y + "," + p.Z);
                         var addMessage = "Welcome @" + notification.Account.Acct +
                                          ", you have joined the game. Type 'help' for commands. " +
                                          "You are in " + dungeon.GetRoomName(p.X, p.Y, p.Z) + "\r\n" +
                                          dungeon.GetRoomExits(p.X, p.Y, p.Z);
                         if (!Program.Debug) // Only send toots if not debugging
                         {
-                            await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                            await tokens.Statuses.PostAsync(status => addMessage, in_reply_to_account_id => notification.Account.Id, visibility => "private");
                         }
                     }
                 }
-                if (notification.Type == "unfollow")
-                {
-                    dungeon.DeletePlayer(notification.Account.Acct);
-                    var delMessage = "Farewell @" + notification.Account.Acct +
-                                     ", you have left the game. Follow to to play again. ";
-                    if (!Program.Debug) // Only send toots if not debugging
-                    {
-                        await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
-                    }
-                }
-
+                //if (notification.Type == "unfollow")
+                //{
+                //    dungeon.DeletePlayer(notification.Account.Acct);
+                //    var delMessage = "Farewell @" + notification.Account.Acct +
+                //                     ", you have left the game. Follow to to play again. ";
+                //    if (!Program.Debug) // Only send toots if not debugging
+                //    {
+                //        await tokens.Statuses.PostAsync(status => delMessage, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                //    }
+                //}
             }
+            // Unfollow, there is no unfollow notification, so we have to check each player!
+            // Get collection 
+            // https://github.com/tootsuite/documentation/blob/master/Using-the-API/API.md#accounts 
+            var dbPlayers = db.GetCollection<Player>("players");
+            dbPlayers.EnsureIndex(x => x.Username);
+            Console.WriteLine("Checking for unfollows...");
+            var allPlayers = dbPlayers.Find(r => r.Username!=null);
+            foreach (var p in allPlayers)
+            {
+                var u = await tokens.Accounts.RelationshipsAsync(id => p.AccountId);
+                if (u != null && !u[0].FollowedBy)
+                {
+                    Console.WriteLine("Player unfollowed (" + p.Id + ") #" + p.AccountId + " - " + p.Username + " in rm " + p.X + "," + p.Y + "," + p.Z);
+                    Console.WriteLine("...deleteing");
+                    dungeon.DeletePlayer(p.Username);
+                }
+            }
+            Console.WriteLine("Complete...");
         }
 
         // Process each mention as command
@@ -208,20 +231,41 @@ namespace AdventureBot
                     Player pl = dungeon.LoadPlayer(notification.Account.Acct);
                     if (pl != null && (pl.LastStatusId<currentStatusId || Program.Debug))  // Only last command! unless debugging
                     {
-                        var response = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
+                        var tootToSend = dungeon.Process(pl, notification.Status.Id, notification.Status.Content);
                         dungeon.UpsertPlayer(pl);
-                        if (response != null)
+                        if (tootToSend.Content != "")
                         {
                             if (!Program.Debug) // Only send toots if not debugging
                             {
-                                await tokens.Statuses.PostAsync(status => "@" + notification.Account.Acct + " " + response, in_reply_to_account_id => notification.Account.Id, visibility => "direct");
+                                tootToSend.AccountId = notification.Account.Id;
+                                await tokens.Statuses.PostAsync(status => "@" + tootToSend.Username + " " + tootToSend.Content, in_reply_to_account_id => tootToSend.AccountId, visibility => tootToSend.Privacy);
                             }
-                            Console.Write(">> toot to " + notification.Account.Acct);
-                            Console.WriteLine(" : " + response);
+                            Console.Write(">> toot to " + tootToSend.Username);
+                            Console.WriteLine(" : " + tootToSend.Content);
                         }
                     }
                 }
             }
+
+            // Process/Move monsters
+            var tootsToSend = dungeon.ProcessMonsters();
+            if (tootsToSend != null)
+            {
+                foreach (var ts in tootsToSend)
+                {
+                    if (!Program.Debug) // Only send toots if not debugging
+                    {
+                        await tokens.Statuses.PostAsync(status => "@" + ts.Username + " " + ts.Content, in_reply_to_account_id => ts.AccountId, visibility => ts.Privacy);
+                    }
+                    Console.Write(">> toot to " + ts.Username);
+                    Console.WriteLine(" : " + ts.Content);
+                }
+
+            }
+
+
+
+
         }
 
 

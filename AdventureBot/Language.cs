@@ -27,6 +27,14 @@ namespace AdventureBot
             return toReturn.First().ToString().ToUpper() + toReturn.Substring(1);
         }
 
+        public string GetARandomMonsterName()
+        {
+            Random _rnd = new Random();
+            var toReturn = (_rnd.Next(10) < 5 ? Adjectives[_rnd.Next(Adjectives.Length)] + " " : "") +
+                       Monsters[_rnd.Next(Monsters.Length)];
+            return toReturn.First().ToString().ToUpper() + toReturn.Substring(1);
+        }
+
         public string[] Adjectives = {
             "average", "big", "colossal", "fat", "giant", "gigantic", "great", "huge", "immense", "large",
             "little", "long", "mammoth", "massive", "miniature", "petite", "puny", "short", "small", "tall",
@@ -205,5 +213,12 @@ namespace AdventureBot
             "trackway", "road", "thoroughfare", "ginnel", "snicket", "vennel", "wynd", "twitten", "areaway", "trace",
             "gully"
         };
+
+        public string[] Monsters =
+        {
+            "Baboon","Badger","Bat","Cat","Crab","Deer","Eagle","Frog","Fire Beetle","Goat","Hawk","Hyena","Jackal","Lizard","Owl","Rat","Raven","Scorpion","Spider","Vulture","Weasel","Hawk","Panther","Wolf","Ape","Bear","Crocodile","Dire Wolf","Lion","Tiger","Unicorn","Golem","Wyrmling","Gargoyle","Air Elemental","Earth Elemental","Fire Elemental","Salamander","Water Elemental","Djinn","Pixie","Sprite","Satyr","Dryad","Hag","Imp","Devil","Hell Hound","Nightmare","Succubus","Incubus","Ogre","Giant","Troll","Cyclops","Cultist","Guard","Noble","Warrior","Bandit","Kobold","Troglodyte","Drow","Goblin","Scout","Thug","Gnome","Lizardman","Berserker","Fanatic","Druid","Priest","Knight","Werewolf","Gladiator","Mage","Assassin","Archmage","Hobgoblin","Worg","Cockatrice","Harpy","Centaur","Griffon","Minotaur","Manticore","Basilisk","Gorgon","Chimera","Medusa","Abomination","Roc","Ooze","Jelly","Sentient Fungus","Treant","Swarm of Bats","Swarm of Rats","Swarm of Insects","Swarm of Snakes","Zombie","Shadow","Skeleton","Ghoul","Specter","Ghast","Mummy","Wight","Ghost","Banshee","Revenant","Wraith","Vampire","Lich","Dragon","Wyvern"
+        };
+
+
     }
 }
