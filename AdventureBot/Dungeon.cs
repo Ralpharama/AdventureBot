@@ -56,6 +56,13 @@ namespace AdventureBot
 
             var showRoomDetails = true;
 
+            // They're dead
+            if (!p.IsActive)
+            {
+                toReturn.Content += "You are dead.\r\n Unfollow me and wait for a confirmatation message that you have left the game, then follow me to play again. \r\n";
+                return toReturn;
+            }
+
             // Directions
             if (words.Any("|north|".Contains))
             {
@@ -159,9 +166,25 @@ namespace AdventureBot
                 return toReturn;
             }
 
+            // Attack
+            if (words.Any("|attack|".Contains) || words.Any("|kill|".Contains) || words.Any("|hit|".Contains))
+            {
+                var monstersEnumerable = GetMonstersInRoom(p.X, p.Y, p.Z);
+                if (monstersEnumerable != null)
+                {
+                    toReturn.Content += Fight(p,monstersEnumerable.First());
+                    toReturn.Content += Fight(monstersEnumerable.First(),p);
+                }
+                else
+                {
+                    toReturn.Content += "Attack what? There's no one here.\r\n";
+                }
+                return toReturn;
+            }
+
+            // Don't understand
             if (toReturn.Content == "")
             {
-                // Don't understand
                 toReturn.Content =
                     "I'm sorry, I didn't understand that. Try using simple words, type 'help' for a full list of commands I understand.\r\n";
             }
@@ -367,6 +390,24 @@ namespace AdventureBot
             return _rooms[x, y, z].Title;
             //+ " {" + x + "," + y + "," + z + "}";
         }
+        public Item GetItem(int i)
+        {
+            var item = _db.GetCollection<Item>("items");
+            var toReturn = item.FindOne(r => r.Id == i);
+            return toReturn;
+        }
+        public IEnumerable<Item> GetPlayerItems(string username)
+        {
+            var items = _db.GetCollection<Item>("items");
+            IEnumerable<Item> toReturn = items.Find(r => r.PlayerUsername == username);
+            return toReturn;
+        }
+        public IEnumerable<Item> GetPlayerWearing(int[] objs)
+        {
+            var items = _db.GetCollection<Item>("items");
+            IEnumerable<Item> toReturn = items.Find(r => objs.Contains(r.Id));
+            return toReturn;
+        }
 
         public string GetRoomExits(int x, int y, int z)
         {
@@ -427,11 +468,24 @@ namespace AdventureBot
                 var p = LoadPlayer(monster.X, monster.Y, monster.Z);
                 if (p != null)
                 {
-                    thisToot.Username = p.Username;
-                    thisToot.AccountId = p.AccountId;
-                    thisToot.Privacy = "direct";
-                    thisToot.Content = monster.Username + " looks at you nastily.";
-                    toReturn.Add(thisToot);
+                    // Monster randomly attacks you
+                    if (_rnd.Next(5) == 3)
+                    {
+                        thisToot.Username = p.Username;
+                        thisToot.AccountId = p.AccountId;
+                        thisToot.Privacy = "direct";
+                        thisToot.Content = Fight(monster, p);
+                        toReturn.Add(thisToot);
+                    }
+                    // Monster just looks at you
+                    else
+                    {
+                        thisToot.Username = p.Username;
+                        thisToot.AccountId = p.AccountId;
+                        thisToot.Privacy = "direct";
+                        thisToot.Content = monster.Username + " looks at you nastily.";
+                        toReturn.Add(thisToot);
+                    }
                 }
                 // If not, let's maybe move
                 else
@@ -774,6 +828,107 @@ namespace AdventureBot
         }
 
         #endregion
+
+
+
+        // Fight! 
+        public string Fight(Player attacker, Player defender)
+        {
+            string toReturn = "";
+
+            // Get attacker stats
+            int attackBase = attacker.Strength;
+            var attackerWeapon = GetItem(attacker.Weapon);
+            toReturn += attacker.Username + " attacks " + defender.Username;
+            if (attackerWeapon!=null)
+            {
+                attackBase += attackerWeapon.Strength;
+                toReturn += " using " + attackerWeapon.Name + " ("+attackerWeapon.Strength+") ";
+            }
+            attackBase = (attackBase < 1) ? 1 : attackBase; 
+            attackBase = _rnd.Next(attackBase - (_rnd.Next(attackBase / 2)))+1;
+            var modifier = _rnd.Next(10);
+            if (modifier < 4 && modifier > 1)
+            {
+                attackBase = attackBase / 2;
+                toReturn += ", you make a poor attack, ";
+            } else if (modifier < 2)
+            {
+                attackBase = attackBase / 4;
+                toReturn += ", you slip clumsily as you attack, ";
+            }
+            toReturn += " with a total attack of " + attackBase + ".";
+            toReturn += "\n\r";
+
+            // Get defender defends
+            int defenceBase = 0;
+            toReturn += defender.Username + " defends";
+            if (defender.Wearing != null && defender.Wearing.Length>0)
+            {
+                var defenderWearing = GetPlayerWearing(defender.Wearing);
+                foreach (var item in defenderWearing)
+                {
+                    if (item.Strength > 0)
+                    {
+                        defenceBase += item.Strength;
+                    }
+                }
+            }
+            toReturn += " with a total defence of " + defenceBase + ".";
+            toReturn += "\n\r";
+
+            // Result
+            var difference = attackBase - defenceBase;
+            if (difference>0)
+            {
+                toReturn += attacker.Username + " causes " + difference + " damage to "+defender.Username;
+                toReturn += "\n\r";
+                defender.Health -= difference;
+                if (defender.Health < 1)
+                {
+                    DoDeath(defender);
+                    toReturn += defender.Username + " has been killed! ";
+                    toReturn += "\n\r";
+                }
+            }
+            if (defender.IsPlayer)
+            {
+                UpsertPlayer(defender); // Update to db
+            }
+            if (defender.IsMonster)
+            {
+                UpsertMonster(defender); // Update to db
+            }
+            Console.WriteLine(toReturn);
+            return toReturn;
+        }
+
+        public void DoDeath(Player p)
+        {
+            if (p.IsPlayer)
+            {
+                p.Health = 0;
+                p.IsActive = false;
+                UpsertPlayer(p); // Update to db
+            }
+            if (p.IsMonster)
+            {
+                p.Z = _rnd.Next(Program.ZSize);
+                p.Username = _language.GetARandomMonsterName();
+                p.Health = (_rnd.Next(10) * p.Z) + 1;
+                p.Magic = (_rnd.Next(10) * p.Z) + 1;
+                p.Luck = (_rnd.Next(10) * p.Z) + 1;
+                p.Strength = (_rnd.Next(10) * p.Z) + 1;
+                p.Level = (_rnd.Next(3) * p.Z) + 1;
+                p.Weapon = 0;
+                p.IsActive = true;
+                p.LastStatusId = 0;
+                MovePlayerRnd(p,p.Z);
+                UpsertMonster(p); // Update to db
+            }
+        }
+
+
 
 
     }
